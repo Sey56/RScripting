@@ -1,0 +1,23 @@
+﻿<Project>
+	<PropertyGroup>
+		<TargetFramework>net8.0-windows</TargetFramework>
+		<PlatformTarget>x64</PlatformTarget>
+		<ImplicitUsings>enable</ImplicitUsings>
+		<Nullable>enable</Nullable>
+		<Company>Codarch</Company>
+		<AssemblyVersion>1.0.0.0</AssemblyVersion>
+		<FileVersion>1.0.0.0</FileVersion>
+		<RevitApiPath>C:\Program Files\Autodesk\Revit 2025</RevitApiPath>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<Reference Include="RevitAPI">
+			<HintPath>$(RevitApiPath)\RevitAPI.dll</HintPath>
+			<Private>False</Private>
+		</Reference>
+		<Reference Include="RevitAPIUI">
+			<HintPath>$(RevitApiPath)\RevitAPIUI.dll</HintPath>
+			<Private>False</Private>
+		</Reference>
+	</ItemGroup>
+</Project>

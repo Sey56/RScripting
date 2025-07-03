@@ -1,0 +1,33 @@
+# Build output folders
+**/bin/
+**/obj/
+
+# VS Code extension build artifacts
+*.vsix
+dist/
+.vscode-test/
+
+# Node modules
+node_modules/
+
+# User-specific files and IDE settings
+*.user
+*.suo
+*.vs/
+.vscode/
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Revit API generated files
+RScriptWorkspace/global.json
+RScriptWorkspace/*.csproj
+RScriptWorkspace/Properties/
+
+# OS
+.DS_Store
+Thumbs.db
+
+!rscript-extension/

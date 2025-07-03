@@ -1,0 +1,11 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<RevitAddIns>
+  <AddIn Type="Application">
+    <Name>RScript</Name>
+    <Assembly>RScript/RScript.Addin.dll</Assembly>
+    <ClientId>6df0a7cb-0144-4d1f-85b8-ee1af5221eac</ClientId>
+    <FullClassName>RScript.Addin.App.RevitExternalApp</FullClassName>
+    <VendorId>CODARCH</VendorId>
+    <VendorDescription>Codarch Tools</VendorDescription>
+  </AddIn>
+</RevitAddIns>
