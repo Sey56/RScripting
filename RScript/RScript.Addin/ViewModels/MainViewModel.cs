@@ -6,9 +6,9 @@ namespace RScript.Addin.ViewModels
 {
     public class MainViewModel
     {
-        private ExternalEvent _codeExecutionEvent;
-        private string _pendingScriptContent;
-        private UIApplication _pendingUiApp;
+        private ExternalEvent? _codeExecutionEvent;
+        private string? _pendingScriptContent;
+        private UIApplication? _pendingUiApp;
 
         public static MainViewModel Instance => _instance ??= new MainViewModel();
         private static MainViewModel? _instance;

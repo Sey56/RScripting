@@ -11,8 +11,8 @@ namespace RScript.Addin.Services
     {
         private bool _running;
         private readonly string _logPath = Path.Combine(RevitExternalApp.HomePath, "RScriptServerLog.txt");
-        private NamedPipeServerStream _pipeServer;
-        private CancellationTokenSource _cts;
+        private NamedPipeServerStream? _pipeServer;
+        private CancellationTokenSource? _cts;
         private readonly UIApplication _uiApp;
 
         public RevitScriptServer(UIApplication uiApp)

@@ -8,12 +8,12 @@ namespace RScript.Addin.Services
 {
     public class ScriptGlobals
     {
-        public UIApplication UIApp { get; set; }
-        public UIDocument UIDoc { get; set; }
-        public Autodesk.Revit.DB.Document Doc { get; set; }
+        public UIApplication? UIApp { get; set; }
+        public UIDocument? UIDoc { get; set; }
+        public Autodesk.Revit.DB.Document? Doc { get; set; }
 
         // Output pipe name injected before script execution
-        public static string OutputPipeName { get; set; }
+        public static string? OutputPipeName { get; set; }
 
         public static void Print(string message)
         {
@@ -34,7 +34,7 @@ namespace RScript.Addin.Services
 
         public static string GetRevitInstallDirectory()
         {
-            return Path.GetDirectoryName(Process.GetCurrentProcess().MainModule.FileName)
+            return Path.GetDirectoryName(Environment.ProcessPath)
                 ?? throw new InvalidOperationException("Could not determine Revit install path.");
         }
     }

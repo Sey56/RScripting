@@ -120,16 +120,9 @@ namespace RScript.Addin.Services
 
                 ms.Seek(0, SeekOrigin.Begin);
                 var assembly = alc.LoadFromStream(ms);
-                var entryType = assembly.GetType("CombinedEntryPoint");
-
-                if (entryType == null)
-                    throw new Exception("Entry point type 'CombinedEntryPoint' not found.");
-
-                var method = entryType.GetMethod("Execute", BindingFlags.Public | BindingFlags.Static);
-                if (method == null)
-                    throw new Exception("Static method 'Execute(Document)' not found in 'CombinedEntryPoint'.");
-
-                method.Invoke(null, new object[] { globals.Doc, globals });
+                var entryType = assembly.GetType("CombinedEntryPoint") ?? throw new Exception("Entry point type 'CombinedEntryPoint' not found.");
+                var method = entryType.GetMethod("Execute", BindingFlags.Public | BindingFlags.Static) ?? throw new Exception("Static method 'Execute(Document)' not found in 'CombinedEntryPoint'.");
+                method.Invoke(null, [globals.Doc, globals]);
 
                 File.AppendAllText(logPath, "✅ Script executed successfully.\n");
                 ScriptGlobals.Print("✅ Code executed successfully.");
@@ -171,8 +164,8 @@ namespace RScript.Addin.Services
     public class ExecutionResult
     {
         public bool IsSuccess { get; set; }
-        public string ErrorMessage { get; set; }
-        public string ResultMessage { get; set; }
-        public dynamic ReturnValue { get; set; }
+        public string? ErrorMessage { get; set; }
+        public string? ResultMessage { get; set; }
+        public dynamic? ReturnValue { get; set; }
     }
 }
