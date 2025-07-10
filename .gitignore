@@ -1,33 +1,41 @@
 # Build output folders
 **/bin/
 **/obj/
+RScript.Addin/Output/
 
 # VS Code extension build artifacts
 *.vsix
 dist/
 .vscode-test/
+.rscript-extension-temp/
 
 # Node modules
 node_modules/
+*.tsbuildinfo
 
 # User-specific files and IDE settings
 *.user
 *.suo
+*.csproj.user
+*.sln*
 *.vs/
 .vscode/
 
-# Logs
+# Logs and temp
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+*.log
+*.tmp
 
-# Revit API generated files
+# Revit API generated workspace files
 RScriptWorkspace/global.json
 RScriptWorkspace/*.csproj
 RScriptWorkspace/Properties/
 
-# OS
+# OS artifacts
 .DS_Store
 Thumbs.db
 
+# Force keep extension folder (ignore only its artifacts)
 !rscript-extension/
