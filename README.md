@@ -27,7 +27,7 @@ It complements traditional add-ins and tools like Dynamo by offering a lightweig
 Use Git Bash (comes with [Git for Windows](https://git-scm.com)):
 
 ```bash
-git clone https://github.com/your-username/RScripting.git
+git clone https://github.com/Sey56/RScripting.git
 cd RScripting
 ./build.sh
 ```
