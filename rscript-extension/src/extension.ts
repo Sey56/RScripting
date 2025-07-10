@@ -53,7 +53,7 @@ export function activate(context: vscode.ExtensionContext) {
         const globalJson = `
 {
   "sdk": {
-    "version": "8.0.407"
+    "version": "8.0.411"
   }
 }
             `.trim();
@@ -72,15 +72,15 @@ export function activate(context: vscode.ExtensionContext) {
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <LangVersion>latest</LangVersion>
-    <OutputType>Library</OutputType>
+    <OutputType>Exe</OutputType>
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="RevitAPI">
-      <HintPath>${revitPath}\\RevitAPI.dll</HintPath>
+      <HintPath>C:\Program Files\Autodesk\Revit 2025\RevitAPI.dll</HintPath>
       <Private>False</Private>
     </Reference>
     <Reference Include="RevitAPIUI">
-      <HintPath>${revitPath}\\RevitAPIUI.dll</HintPath>
+      <HintPath>C:\Program Files\Autodesk\Revit 2025\RevitAPIUI.dll</HintPath>
       <Private>False</Private>
     </Reference>
   </ItemGroup>
