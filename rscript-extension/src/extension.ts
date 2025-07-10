@@ -21,6 +21,7 @@ export function activate(context: vscode.ExtensionContext) {
       }
 
       const rootPath = workspaceFolders[0].uri.fsPath;
+      const workspaceName = path.basename(rootPath);
       const stubsPath = path.join(rootPath, "Stubs");
       const scriptsPath = path.join(rootPath, "Scripts");
       const toolsPath = path.join(rootPath, "Tools");
@@ -59,19 +60,14 @@ export function activate(context: vscode.ExtensionContext) {
             `.trim();
         fs.writeFileSync(path.join(rootPath, "global.json"), globalJson);
 
-        // 📦 Create RScript.csproj
-        const config = vscode.workspace.getConfiguration("rscript");
-        const revitPath = config.get<string>(
-          "revitInstallPath",
-          "C:\\Program Files\\Autodesk\\Revit 2025"
-        );
+        // 📦 Create workspaceName.csproj
         const rawPath = `${process.env["ProgramFiles"]}\\Autodesk\\Revit 2025`;
         const revitDir = rawPath.replace(/\\/g, "/");
 
         const csproj = `
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFramework>net8.0</TargetFramework>
+    <TargetFramework>net8.0-windows</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <LangVersion>latest</LangVersion>
@@ -88,8 +84,12 @@ export function activate(context: vscode.ExtensionContext) {
     </Reference>
   </ItemGroup>
 </Project>
-`.trim();
-        fs.writeFileSync(path.join(rootPath, "RScript.csproj"), csproj);
+        `.trim();
+
+        fs.writeFileSync(
+          path.join(rootPath, `${workspaceName}.csproj`),
+          csproj
+        );
 
         // 🧠 IntelliSense stubs
         const stubs = `
