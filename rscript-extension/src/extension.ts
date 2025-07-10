@@ -119,7 +119,7 @@ Print("Starting spiral sketch...");
 Transact("Create Spiral", doc =>
 {
     var spiral = new SpiralCreator();
-    spiral.CreateSpiral(Doc, "Level 1", 100, 5, 10);
+    spiral.CreateSpiral(Doc, "Level 1", 100, 5, 20);
 });
 
 Print("Spiral sketch finished.");
