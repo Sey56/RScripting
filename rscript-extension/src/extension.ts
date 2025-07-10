@@ -65,6 +65,9 @@ export function activate(context: vscode.ExtensionContext) {
           "revitInstallPath",
           "C:\\Program Files\\Autodesk\\Revit 2025"
         );
+        const rawPath = `${process.env["ProgramFiles"]}\\Autodesk\\Revit 2025`;
+        const revitDir = rawPath.replace(/\\/g, "/");
+
         const csproj = `
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
@@ -76,16 +79,16 @@ export function activate(context: vscode.ExtensionContext) {
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="RevitAPI">
-      <HintPath>C:\Program Files\Autodesk\Revit 2025\RevitAPI.dll</HintPath>
+      <HintPath>${revitDir}/RevitAPI.dll</HintPath>
       <Private>False</Private>
     </Reference>
     <Reference Include="RevitAPIUI">
-      <HintPath>C:\Program Files\Autodesk\Revit 2025\RevitAPIUI.dll</HintPath>
+      <HintPath>${revitDir}/RevitAPIUI.dll</HintPath>
       <Private>False</Private>
     </Reference>
   </ItemGroup>
 </Project>
-            `.trim();
+`.trim();
         fs.writeFileSync(path.join(rootPath, "RScript.csproj"), csproj);
 
         // 🧠 IntelliSense stubs
