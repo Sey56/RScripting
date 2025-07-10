@@ -1,52 +1,37 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
-	<PropertyGroup>
-		<TargetFramework>net8.0-windows</TargetFramework>
-		<UseWPF>true</UseWPF>
-		<AssemblyTitle>RScript</AssemblyTitle>
-		<AssemblyName>RScript.Addin</AssemblyName>
-		<PlatformTarget>x64</PlatformTarget>
-		<Company>Codarch</Company>
-		<AssemblyVersion>1.0.0.0</AssemblyVersion>
-		<FileVersion>1.0.0.0</FileVersion>
-		<ImplicitUsings>enable</ImplicitUsings>
-		<Nullable>enable</Nullable>
-		<RuntimeIdentifier>win-x64</RuntimeIdentifier>
-	</PropertyGroup>
+  <PropertyGroup>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    <UseWPF>true</UseWPF>
+    <AssemblyTitle>RScript</AssemblyTitle>
+    <AssemblyName>RScript.Addin</AssemblyName>
+    <PlatformTarget>x64</PlatformTarget>
+    <Company>Codarch</Company>
+    <AssemblyVersion>1.0.0.0</AssemblyVersion>
+    <FileVersion>1.0.0.0</FileVersion>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
 
-	<ItemGroup>
-		<PackageReference Include="Microsoft.CodeAnalysis" Version="4.12.0" />
-		<PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="4.12.0" />
-		<PackageReference Include="Microsoft.CodeAnalysis.CSharp.Scripting" Version="4.12.0" />
-		<PackageReference Include="Microsoft.CodeAnalysis.Scripting" Version="4.12.0" />
-		<PackageReference Include="System.Collections.Immutable" Version="8.0.0" />
-		<!-- Transitive for Roslyn -->
-	</ItemGroup>
+    <!-- Allow override via command line or environment -->
+    <RevitInstallPath Condition="'$(RevitInstallPath)' == ''">C:\Program Files\Autodesk\Revit 2025</RevitInstallPath>
+  </PropertyGroup>
 
-	<ItemGroup>
-		<Reference Include="RevitAPI">
-			<HintPath>$(RevitAPIPath)\RevitAPI.dll</HintPath>
-			<Private>False</Private>
-		</Reference>
-		<Reference Include="RevitAPIUI">
-			<HintPath>$(RevitAPIPath)\RevitAPIUI.dll</HintPath>
-			<Private>False</Private>
-		</Reference>
-	</ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.CodeAnalysis" Version="4.12.0" />
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="4.12.0" />
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp.Scripting" Version="4.12.0" />
+    <PackageReference Include="Microsoft.CodeAnalysis.Scripting" Version="4.12.0" />
+    <PackageReference Include="System.Collections.Immutable" Version="8.0.0" />
+  </ItemGroup>
 
-	<Target Name="CopyDependencies" AfterTargets="Build">
-		<ItemGroup>
-			<RoslynDlls Include="$(UserProfile)\.nuget\packages\microsoft.codeanalysis.common\4.12.0\lib\netstandard2.0\Microsoft.CodeAnalysis.dll" />
-			<RoslynCSharpDlls Include="$(UserProfile)\.nuget\packages\microsoft.codeanalysis.csharp\4.12.0\lib\netstandard2.0\Microsoft.CodeAnalysis.CSharp.dll" />
-			<ScriptingDlls Include="$(UserProfile)\.nuget\packages\microsoft.codeanalysis.scripting.common\4.12.0\lib\net8.0\Microsoft.CodeAnalysis.Scripting.dll" />
-			<CSharpScriptingDlls Include="$(UserProfile)\.nuget\packages\microsoft.codeanalysis.csharp.scripting\4.12.0\lib\net8.0\Microsoft.CodeAnalysis.CSharp.Scripting.dll" />
-			<ImmutableDlls Include="$(UserProfile)\.nuget\packages\system.collections.immutable\8.0.0\lib\net8.0\System.Collections.Immutable.dll" />
-		</ItemGroup>
-		<Copy SourceFiles="$(OutputPath)RScript.Addin.dll" DestinationFolder="$(OutputPath)" />
-		<Copy SourceFiles="$(OutputPath)RScript.Addin.pdb" DestinationFolder="$(OutputPath)" />
-		<Copy SourceFiles="@(RoslynDlls)" DestinationFolder="$(OutputPath)" />
-		<Copy SourceFiles="@(RoslynCSharpDlls)" DestinationFolder="$(OutputPath)" />
-		<Copy SourceFiles="@(ScriptingDlls)" DestinationFolder="$(OutputPath)" />
-		<Copy SourceFiles="@(CSharpScriptingDlls)" DestinationFolder="$(OutputPath)" />
-		<Copy SourceFiles="@(ImmutableDlls)" DestinationFolder="$(OutputPath)" />
-	</Target>
+  <ItemGroup>
+    <Reference Include="RevitAPI">
+      <HintPath>$(RevitInstallPath)\RevitAPI.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="RevitAPIUI">
+      <HintPath>$(RevitInstallPath)\RevitAPIUI.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+  </ItemGroup>
 </Project>

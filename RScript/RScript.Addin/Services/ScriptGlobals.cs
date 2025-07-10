@@ -1,41 +1,22 @@
-﻿using Autodesk.Revit.UI;
-using System.Diagnostics;
-using System.IO;
-using System.IO.Pipes;
-using System.Text;
+﻿using Autodesk.Revit.DB;
+using Autodesk.Revit.UI;
+using System;
 
 namespace RScript.Addin.Services
 {
-    public class ScriptGlobals
+    public static class ScriptGlobals
     {
-        public UIApplication? UIApp { get; set; }
-        public UIDocument? UIDoc { get; set; }
-        public Autodesk.Revit.DB.Document? Doc { get; set; }
+        public static UIApplication? UIApp { get; set; }
+        public static UIDocument? UIDoc { get; set; }
+        public static Document? Doc { get; set; }
 
-        // Output pipe name injected before script execution
-        public static string? OutputPipeName { get; set; }
+        public static List<string> PrintLogs { get; } = new();
 
         public static void Print(string message)
         {
-            if (string.IsNullOrEmpty(OutputPipeName)) return;
-
-            try
-            {
-                using var client = new NamedPipeClientStream(".", OutputPipeName, PipeDirection.Out);
-                client.Connect(1000); // Try for 1 second
-                using var writer = new StreamWriter(client, Encoding.UTF8) { AutoFlush = true };
-                writer.WriteLine(message);
-            }
-            catch
-            {
-                // Silent fail – don't break script if pipe can't be written
-            }
-        }
-
-        public static string GetRevitInstallDirectory()
-        {
-            return Path.GetDirectoryName(Environment.ProcessPath)
-                ?? throw new InvalidOperationException("Could not determine Revit install path.");
+            var entry = $"[PRINT {DateTime.Now:HH:mm:ss}] {message}";
+            PrintLogs.Add(entry);
+            Console.WriteLine(entry);
         }
     }
 }

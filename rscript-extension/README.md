@@ -1,41 +1,34 @@
-# RScript Extension
+📘 RScript Extension for VS Code
+Send C# scripts directly to Autodesk Revit — no compile, no fuss.
+This extension enables rapid BIM automation by connecting your RScripting workspace in VS Code to a Revit Add-in bridge.
 
-Run C# scripts inside Autodesk Revit directly from VS Code.
+✨ Features
+- 🛠 One-click workspace scaffolding
+- 🚀 Direct script execution in Revit from VS Code
+- 🎯 Built-in IntelliSense stubs for Revit API
+- 🔄 Automatic file wiring: Stubs/, Scripts/, Tools/
+- ⚙️ Runs scripts using rscript-bridge.exe behind the scenes
 
-## ✨ Features
-
-- Initialize a Revit scripting workspace with full IntelliSense and build config
-- Run scripts in live Revit sessions via named pipe (`RScriptPipe`)
-- Auto-generate `.csproj`, API stubs, and sample scripts
-- Unified bridge via `rscript-bridge.exe` — no more SendToRevit.exe
-
-## 🛠 Requirements
-
-- Revit 2025 installed (for RevitAPI.dll and RevitAPIUI.dll)
-- RScript Add-in loaded (listening on `RScriptPipe`)
-- .NET 8 SDK (for building)
-- Node.js (for extension packaging)
-- Windows only (Revit is required)
-
-## 🚀 Getting Started
-
-1. Clone [RScripting](https://github.com/Sey56/RScripting)
-2. Run `./build.sh` from Git Bash to package and install the extension
-3. Open `RScriptWorkspace/` in VS Code
-4. Run `RScript: Initialize Workspace` from the Command Palette
-5. Edit `Scripts/SampleScript.cs`
-6. Press `Ctrl + Alt + R` to run the script — results stream from Revit
-
-## 🔧 Configuration
-
-Set your Revit path if it differs from the default:
-
-```json
-"rscript.revitInstallPath": "C:\\Program Files\\Autodesk\\Revit 2025"
-
-
-
-🧩 Contributing
-Issues and pull requests welcome at:
-https://github.com/Sey56/RScripting
-© 2025 Seyoum Hagos — MIT License
+🧪 Getting Started
+- Install the RScript Add-in in Revit 2025
+(Run build.sh or manually copy the DLL and .addin file)
+- Install this extension in VS Code
+- Open an empty workspace folder and run:
+- RScript: Initialize Workspace from the Command Palette
+- Modify or create scripts in Scripts/
+- Run the script:
+- RScript: Send Script to Revit
+🗂 Workspace StructureYourWorkspace/
+├── Scripts/
+│   └── SampleScript.cs
+├── Stubs/
+│   └── RScriptAddinServices.cs
+├── Tools/
+│   └── rscript-bridge.exe
+├── RScript.csproj
+├── global.json
+└── .vscode/
+    └── tasks.json
+💻 Requirements- .NET 8 SDK
+- Revit 2025 installed
+- RScripting Add-in deployed

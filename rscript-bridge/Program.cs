@@ -2,69 +2,99 @@
 using System.IO;
 using System.IO.Pipes;
 using System.Text;
-using System.Threading;
+using System.Text.Json;
+using System.Collections.Generic;
 
 class Program
 {
     static void Main(string[] args)
     {
-        if (args.Length == 0)
+        string logPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "RScriptBridgeLog.txt");
+        File.AppendAllText(logPath, $"Bridge started at {DateTime.Now}\n");
+
+        try
         {
-            Console.WriteLine("Please provide a .cs file path as an argument.");
-            return;
-        }
-
-        string scriptPath = args[0];
-        if (!File.Exists(scriptPath))
-        {
-            Console.WriteLine($"File not found: {scriptPath}");
-            return;
-        }
-
-        string scriptContent = File.ReadAllText(scriptPath);
-        byte[] scriptBytes = Encoding.UTF8.GetBytes(scriptContent);
-
-        // 🔁 Generate unique output pipe name
-        string outputPipeName = $"RScriptOutputPipe_{Guid.NewGuid():N}";
-        byte[] outputPipeBytes = Encoding.UTF8.GetBytes(outputPipeName);
-
-        // 🔊 Prepare output pipe server and bind early
-        var outputPipe = new NamedPipeServerStream(outputPipeName, PipeDirection.In, 1, PipeTransmissionMode.Byte, PipeOptions.Asynchronous);
-        var outputReader = new StreamReader(outputPipe);
-
-        // ⏳ Begin listening BEFORE sending to Revit
-        var outputThread = new Thread(() =>
-        {
-            try
+            if (args.Length == 0)
             {
-                outputPipe.WaitForConnection();
-                string line;
-                while ((line = outputReader.ReadLine()) != null)
+                Console.WriteLine("Please provide the path to the Scripts folder.");
+                File.AppendAllText(logPath, "No script folder path provided.\n");
+                Environment.Exit(1);
+            }
+
+            string scriptsFolder = args[0];
+            if (!Directory.Exists(scriptsFolder))
+            {
+                Console.WriteLine($"Scripts folder not found: {scriptsFolder}");
+                File.AppendAllText(logPath, $"Scripts folder not found: {scriptsFolder}\n");
+                Environment.Exit(1);
+            }
+
+            var scriptFiles = Directory.GetFiles(scriptsFolder, "*.cs");
+            var scriptList = new List<object>();
+
+            foreach (var file in scriptFiles)
+            {
+                string content = File.ReadAllText(file);
+                scriptList.Add(new
                 {
-                    Console.WriteLine("[Revit] " + line);
-                }
+                    FileName = Path.GetFileName(file),
+                    Content = content
+                });
             }
-            catch (IOException ex)
+
+            string jsonPayload = JsonSerializer.Serialize(scriptList);
+            byte[] payloadBytes = Encoding.UTF8.GetBytes(jsonPayload);
+
+            using var pipeClient = new NamedPipeClientStream(".", "RScriptPipe", PipeDirection.InOut, PipeOptions.Asynchronous);
+            pipeClient.Connect(5000);
+            File.AppendAllText(logPath, "Connected to pipe server.\n");
+
+            // Write payload length
+            byte[] lengthBytes = BitConverter.GetBytes(payloadBytes.Length);
+            pipeClient.Write(lengthBytes, 0, 4);
+            pipeClient.Flush();
+
+            // Write payload
+            pipeClient.Write(payloadBytes, 0, payloadBytes.Length);
+            pipeClient.Flush();
+            File.AppendAllText(logPath, $"Sent payload of {payloadBytes.Length} bytes.\n");
+
+            // Read response length
+            byte[] responseLengthBuffer = new byte[4];
+            pipeClient.Read(responseLengthBuffer, 0, 4);
+            int responseLength = BitConverter.ToInt32(responseLengthBuffer, 0);
+
+            // Read response
+            byte[] responseBuffer = new byte[responseLength];
+            int bytesRead = 0;
+            while (bytesRead < responseLength)
             {
-                Console.WriteLine($"[OutputPipe Error] {ex.Message}");
+                int read = pipeClient.Read(responseBuffer, bytesRead, responseLength - bytesRead);
+                if (read == 0) break;
+                bytesRead += read;
             }
-        });
-        outputThread.Start();
 
-        // 📤 Connect to RevitScriptServer pipe and send script + pipe name
-        using var pipeClient = new NamedPipeClientStream(".", "RScriptPipe", PipeDirection.Out);
-        pipeClient.Connect(5000);
-        using var writer = new BinaryWriter(pipeClient);
+            string response = Encoding.UTF8.GetString(responseBuffer);
+            Console.WriteLine(response);
+            File.AppendAllText(logPath, $"Received response: {response}\n");
 
-        writer.Write(scriptBytes.Length);
-        writer.Write(scriptBytes);
-        writer.Write(outputPipeBytes.Length);
-        writer.Write(outputPipeBytes);
-        writer.Flush();
+            File.AppendAllText(logPath, "Bridge exiting cleanly.\n");
+        }
+        catch (TimeoutException)
+        {
+            Console.WriteLine("Connection to Revit timed out. Make sure RScript is running in Revit.");
+            File.AppendAllText(logPath, "Connection timeout error\n");
+            Environment.Exit(1);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error sending scripts: {ex.Message}");
+            File.AppendAllText(logPath, $"Bridge error: {ex.Message}\n");
+            Environment.Exit(1);
+        }
 
-        Console.WriteLine("[Listener] Waiting for Revit to stream output...");
-        outputThread.Join(10000); // Wait up to 10s for listener to complete
 
-        outputPipe.Dispose();
+        // Ensure process exits
+        Environment.Exit(0);
     }
 }

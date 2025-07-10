@@ -1,11 +1,16 @@
 ﻿using Autodesk.Revit.UI;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
-using System.Diagnostics;
-using System.IO;
+using Microsoft.CodeAnalysis.CSharp.Scripting;
+using Microsoft.CodeAnalysis.CSharp.Syntax;
+using Microsoft.CodeAnalysis.Scripting;
 using System.Reflection;
 using System.Runtime.Loader;
+using System.Text.Json;
+using System.IO;
 using System.Text;
+using System.Linq;
+using System.Collections.Generic;
 
 namespace RScript.Addin.Services
 {
@@ -13,29 +18,30 @@ namespace RScript.Addin.Services
     {
         public static ExecutionResult ExecuteCode(string userCode, UIApplication uiApp)
         {
-            var alc = new AssemblyLoadContext("RevitScript", isCollectible: true);
+            var alc = new AssemblyLoadContext("RevitScript", true);
             string logPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "CodeRunnerDebug.txt");
-            File.WriteAllText(logPath, $"🔧 Executing script: {DateTime.Now}\n");
+            File.WriteAllText(logPath, $"[{DateTime.Now}] Starting CodeRunner.ExecuteCode\n");
 
             try
             {
-                var globals = new ScriptGlobals
-                {
-                    UIApp = uiApp,
-                    UIDoc = uiApp.ActiveUIDocument,
-                    Doc = uiApp.ActiveUIDocument.Document
-                };
+                // 🧭 Setup globals
+                ScriptGlobals.UIApp = uiApp;
+                ScriptGlobals.UIDoc = uiApp.ActiveUIDocument;
+                ScriptGlobals.Doc = uiApp.ActiveUIDocument?.Document;
+                ScriptGlobals.PrintLogs.Clear();
 
-                if (globals.Doc == null)
+                if (ScriptGlobals.Doc == null || ScriptGlobals.UIDoc == null)
                 {
-                    File.AppendAllText(logPath, "❌ Document is null in script globals\n");
-                    throw new InvalidOperationException("Document is null in script globals");
+                    string error = "Active document is not available. Please open a Revit document.";
+                    File.AppendAllText(logPath, error + "\n");
+                    return new ExecutionResult { IsSuccess = false, ErrorMessage = error };
                 }
 
-                string revitInstallPath = ScriptGlobals.GetRevitInstallDirectory();
+                // 📂 Load Revit DLLs
+                string revitInstallPath = @"C:\Program Files\Autodesk\Revit 2025";
                 if (!Directory.Exists(revitInstallPath))
                 {
-                    string msg = $"❌ Revit installation directory not found at {revitInstallPath}";
+                    string msg = $"Revit installation directory not found at {revitInstallPath}.";
                     File.AppendAllText(logPath, msg + "\n");
                     return new ExecutionResult { IsSuccess = false, ErrorMessage = msg };
                 }
@@ -48,11 +54,12 @@ namespace RScript.Addin.Services
 
                 if (!revitDlls.Any())
                 {
-                    string msg = $"❌ No managed Revit DLLs found in {revitInstallPath}";
+                    string msg = $"No managed Revit DLLs found in {revitInstallPath}";
                     File.AppendAllText(logPath, msg + "\n");
                     return new ExecutionResult { IsSuccess = false, ErrorMessage = msg };
                 }
 
+                // ⚙️ Setup script options
                 var references = new List<MetadataReference>
                 {
                     MetadataReference.CreateFromFile(typeof(object).Assembly.Location),
@@ -60,92 +67,132 @@ namespace RScript.Addin.Services
                     MetadataReference.CreateFromFile(typeof(Assembly).Assembly.Location),
                     MetadataReference.CreateFromFile(typeof(List<>).Assembly.Location),
                     MetadataReference.CreateFromFile(typeof(Math).Assembly.Location),
-                    MetadataReference.CreateFromFile(typeof(System.Console).Assembly.Location),
                     MetadataReference.CreateFromFile(Assembly.GetExecutingAssembly().Location)
                 };
-                references.AddRange(revitDlls);
 
-                // 🔧 Add system references explicitly (mimicking ScriptOptions.Default behavior)
-                var coreDir = Path.GetDirectoryName(typeof(object).Assembly.Location)!;
-                var systemAssemblies = new[]
+                var options = ScriptOptions.Default
+                    .WithReferences(references)
+                    .AddReferences(revitDlls)
+                    .WithImports(
+                        "System",
+                        "System.Linq",
+                        "System.Collections.Generic",
+                        "Autodesk.Revit.DB",
+                        "Autodesk.Revit.UI",
+                        "RScript.Addin.Services"
+                    );
+
+                // 📦 Deserialize user payload
+                var scriptFiles = JsonSerializer.Deserialize<List<ScriptFile>>(userCode);
+                if (scriptFiles == null || scriptFiles.Count == 0)
+                {
+                    string msg = "No script files received or failed to deserialize.";
+                    File.AppendAllText(logPath, msg + "\n");
+                    return new ExecutionResult { IsSuccess = false, ErrorMessage = msg };
+                }
+
+                var usingSet = new HashSet<string>();
+                var topLevelStatements = new List<string>();
+                var userDefinedTypes = new List<string>();
+
+                foreach (var file in scriptFiles)
+                {
+                    var tree = CSharpSyntaxTree.ParseText(file.Content);
+                    var root = tree.GetRoot();
+
+                    foreach (var usingDirective in root.DescendantNodes().OfType<UsingDirectiveSyntax>())
+                        usingSet.Add(usingDirective.ToString());
+
+                    if (file.FileName.Equals("Main.cs", StringComparison.OrdinalIgnoreCase))
+                    {
+                        foreach (var stmt in root.DescendantNodes().OfType<GlobalStatementSyntax>())
+                            topLevelStatements.Add(stmt.ToString());
+                    }
+
+                    foreach (var typeDecl in root.DescendantNodes().OfType<MemberDeclarationSyntax>()
+                        .Where(n => n is ClassDeclarationSyntax or StructDeclarationSyntax or EnumDeclarationSyntax))
+                    {
+                        userDefinedTypes.Add(typeDecl.ToFullString());
+                    }
+                }
+
+                string globalImports = @"
+global using static RScript.Addin.Services.ScriptGlobals;
+global using static RScript.Addin.Services.Helpers;
+global using static RScript.Addin.Services.Tx;
+".Trim();
+
+                string injectedHelper = @"
+public static void Transact(string name, Action<Autodesk.Revit.DB.Document> action)
 {
-    "System.dll",
-    "System.Core.dll",
-    "System.Runtime.dll",
-    "System.Private.CoreLib.dll",
-    "System.Console.dll",
-    "System.Collections.dll",
-    "System.Linq.dll",
-    "System.Threading.Tasks.dll",
-    "System.Private.Uri.dll",
-    "System.Net.Http.dll",
-    "netstandard.dll"
-};
+    Tx.TransactWithDoc(ScriptGlobals.Doc, name, action);
+}
+".Trim();
 
-                foreach (var name in systemAssemblies)
-                {
-                    var path = Path.Combine(coreDir, name);
-                    if (File.Exists(path))
-                    {
-                        references.Add(MetadataReference.CreateFromFile(path));
-                        File.AppendAllText(logPath, $"✅ Found and added: {name}\n");
-                    }
-                    else
-                    {
-                        File.AppendAllText(logPath, $"❌ Missing: {name} at {path}\n");
-                    }
-                }
+                string combinedScript =
+                    globalImports + "\n\n" +
+                    string.Join("\n", usingSet) + "\n\n" +
+                    string.Join("\n", userDefinedTypes) + "\n\n" +
+                    injectedHelper + "\n\n" +
+                    string.Join("\n", topLevelStatements);
 
-                var syntaxTree = CSharpSyntaxTree.ParseText(userCode);
-                var compilation = CSharpCompilation.Create("RScriptUserAssembly")
-                    .WithOptions(new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary))
-                    .AddReferences(references)
-                    .AddSyntaxTrees(syntaxTree);
+                File.AppendAllText(logPath, $"Combined script:\n{combinedScript}\n");
 
-                using var ms = new MemoryStream();
-                var emitResult = compilation.Emit(ms);
+                // 📜 Execute script with console capture
+                var originalOut = Console.Out;
+                var consoleBuffer = new StringWriter();
+                Console.SetOut(consoleBuffer);
 
-                if (!emitResult.Success)
-                {
-                    var errors = emitResult.Diagnostics
-                        .Where(d => d.Severity == DiagnosticSeverity.Error)
-                        .Select(d => d.ToString());
+                var script = CSharpScript.Create(combinedScript, options);
+                var state = script.RunAsync().Result;
 
-                    string errorMessages = "🛑 Compilation failed:\n" + string.Join("\n", errors);
-                    File.WriteAllText(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "CodeEditorError.txt"), errorMessages);
-                    File.AppendAllText(logPath, errorMessages + "\n");
-                    ScriptGlobals.Print(errorMessages);
-                    return new ExecutionResult { IsSuccess = false, ErrorMessage = errorMessages };
-                }
+                string prints = string.Join("\n", ScriptGlobals.PrintLogs);
+                string consoleOutput = consoleBuffer.ToString();
+                Console.SetOut(originalOut);
 
-                ms.Seek(0, SeekOrigin.Begin);
-                var assembly = alc.LoadFromStream(ms);
-                var entryType = assembly.GetType("CombinedEntryPoint") ?? throw new Exception("Entry point type 'CombinedEntryPoint' not found.");
-                var method = entryType.GetMethod("Execute", BindingFlags.Public | BindingFlags.Static) ?? throw new Exception("Static method 'Execute(Document)' not found in 'CombinedEntryPoint'.");
-                method.Invoke(null, [globals.Doc, globals]);
-
-                File.AppendAllText(logPath, "✅ Script executed successfully.\n");
-                ScriptGlobals.Print("✅ Code executed successfully.");
-                return new ExecutionResult { IsSuccess = true, ResultMessage = "Code executed successfully." };
-            }
-            catch (Exception ex)
-            {
-                string errorLogPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "CodeEditorError.txt");
-
-                // 🧠 Extract the most specific exception, including InnerException
-                string coreMessage = ex.InnerException?.Message ?? ex.Message;
-                string fullTrace = $"{ex}\n{ex.InnerException}";
-
-                File.WriteAllText(errorLogPath, $"Error: {coreMessage}\n\nStack Trace:\n{fullTrace}");
-                File.AppendAllText(logPath, $"💥 Runtime error:\n{coreMessage}\n\n{fullTrace}\n");
-
-                // 🌟 Send human-readable message to VS Code output pane
-                ScriptGlobals.Print($"🛑 Script failed: {coreMessage}");
+                string finalMessage = string.IsNullOrWhiteSpace(prints) && string.IsNullOrWhiteSpace(consoleOutput)
+                    ? "Code executed successfully"
+                    : prints + "\n" + consoleOutput;
 
                 return new ExecutionResult
                 {
+                    IsSuccess = true,
+                    ResultMessage = finalMessage.Trim(),
+                    ReturnValue = state.ReturnValue,
+                    ScriptName = "Main.cs"
+                };
+            }
+            catch (CompilationErrorException ex)
+            {
+                string[] details = ex.Diagnostics.Select(d => d.ToString()).ToArray();
+                File.WriteAllLines(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "CodeEditorError.txt"), details);
+                return new ExecutionResult
+                {
                     IsSuccess = false,
-                    ErrorMessage = $"Script failed: {coreMessage}"
+                    ErrorMessage = "Compilation failed",
+                    ErrorDetails = details
+                };
+            }
+            catch (AggregateException ex)
+            {
+                string[] details = ex.InnerExceptions.Select(e => e.ToString()).ToArray();
+                File.WriteAllLines(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "CodeEditorError.txt"), details);
+                return new ExecutionResult
+                {
+                    IsSuccess = false,
+                    ErrorMessage = "Script execution failed",
+                    ErrorDetails = details
+                };
+            }
+            catch (Exception ex)
+            {
+                string[] details = { ex.Message, ex.StackTrace ?? "No stack trace" };
+                File.WriteAllLines(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "CodeEditorError.txt"), details);
+                return new ExecutionResult
+                {
+                    IsSuccess = false,
+                    ErrorMessage = $"Runtime error: {ex.Message}",
+                    ErrorDetails = details
                 };
             }
             finally
@@ -156,16 +203,21 @@ namespace RScript.Addin.Services
 
         private static bool IsManagedAssembly(string filePath)
         {
-            try { AssemblyName.GetAssemblyName(filePath); return true; }
-            catch { return false; }
+            try
+            {
+                AssemblyName.GetAssemblyName(filePath);
+                return true;
+            }
+            catch
+            {
+                return false;
+            }
         }
-    }
 
-    public class ExecutionResult
-    {
-        public bool IsSuccess { get; set; }
-        public string? ErrorMessage { get; set; }
-        public string? ResultMessage { get; set; }
-        public dynamic? ReturnValue { get; set; }
+        private class ScriptFile
+        {
+            public string FileName { get; set; }
+            public string Content { get; set; }
+        }
     }
 }

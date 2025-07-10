@@ -10,7 +10,7 @@ namespace RScript.Addin.Services
 
         public static void TransactWithDoc(Document doc, string transactionName, Action<Document> action)
         {
-            File.AppendAllText(_logPath, $"Starting transaction: {transactionName} at {DateTime.Now}\n");
+            File.AppendAllText(_logPath, $"Starting TransactWithDoc: {transactionName} at {DateTime.Now}\n");
 
             if (doc == null)
             {
@@ -21,16 +21,19 @@ namespace RScript.Addin.Services
             using var transaction = new Transaction(doc, transactionName);
             try
             {
+                File.AppendAllText(_logPath, $"Starting transaction: {transactionName}\n");
                 _ = transaction.Start();
                 action(doc);
+                File.AppendAllText(_logPath, $"Committing transaction: {transactionName}\n");
                 _ = transaction.Commit();
-                File.AppendAllText(_logPath, $"Transaction committed: {transactionName}\n");
+                File.AppendAllText(_logPath, $"Transaction committed successfully: {transactionName}\n");
             }
             catch (Exception ex)
             {
-                File.AppendAllText(_logPath, $"Transaction failed: {transactionName} - {ex.Message}\n");
+                File.AppendAllText(_logPath, $"Exception in TransactWithDoc: {ex.Message}\n");
                 if (transaction.GetStatus() == TransactionStatus.Started)
                 {
+                    File.AppendAllText(_logPath, $"Rolling back transaction: {transactionName}\n");
                     _ = transaction.RollBack();
                 }
                 throw;

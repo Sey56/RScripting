@@ -1,57 +1,43 @@
-﻿using Autodesk.Revit.UI;
+﻿using Autodesk.Revit.Attributes;
+using Autodesk.Revit.DB;
+using Autodesk.Revit.UI;
+using RScript.Addin.App;
 using RScript.Addin.Services;
 using RScript.Addin.ViewModels;
-using RScript.Addin.App;
-using Autodesk.Revit.DB;
 
 namespace RScript.Addin.Commands
 {
-    [Autodesk.Revit.Attributes.Transaction(Autodesk.Revit.Attributes.TransactionMode.Manual)]
+    [Transaction(TransactionMode.Manual)]
     public class ToggleServerCommand : IExternalCommand
     {
         public Result Execute(ExternalCommandData commandData, ref string message, ElementSet elements)
         {
-            var uiApp = commandData.Application;
-
-            var actionHandler = new RevitActionHandler(MainViewModel.Instance);
-            var codeExecutionEvent = ExternalEvent.Create(actionHandler);
-            MainViewModel.Instance.Initialize(codeExecutionEvent);
-
-            try
+            if (commandData == null)
             {
-                if (RevitExternalApp.ServerRunning)
-                {
-                    RevitExternalApp.Server?.Stop();
-                    RevitExternalApp.SetServerRunning(false);
-                    try
-                    {
-                        TaskDialog.Show("RScript", "Server stopped.");
-                    }
-                    catch (Exception ex)
-                    {
-                        System.Diagnostics.Debug.WriteLine($"TaskDialog error: {ex.Message}");
-                    }
-                }
-                else
-                {
-                    var scriptServer = new RevitScriptServer(uiApp);
-                    RevitExternalApp.SetServer(scriptServer);
-                    scriptServer.Start();
-                    RevitExternalApp.SetServerRunning(true);
-                    try
-                    {
-                        TaskDialog.Show("RScript", "Server started.");
-                    }
-                    catch (Exception ex)
-                    {
-                        System.Diagnostics.Debug.WriteLine($"TaskDialog error: {ex.Message}");
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                TaskDialog.Show("RScript Error", $"Failed to toggle server: {ex.Message}");
+                message = "Command data is null.";
                 return Result.Failed;
+            }
+
+            if (!RevitExternalApp.ServerRunning)
+            {
+                var server = new RScriptServer(commandData.Application);
+                var actionHandler = new RevitActionHandler(MainViewModel.Instance);
+                var codeExecutionEvent = ExternalEvent.Create(actionHandler);
+                MainViewModel.Instance.Initialize(codeExecutionEvent);
+                server.Start();
+                RevitExternalApp.SetServer(server);
+                RevitExternalApp.SetServerRunning(true);
+                TaskDialog.Show("RScript", "Server started. Run scripts from VSCode!");
+            }
+            else
+            {
+                // Stop the current server
+                RevitExternalApp.Server?.Stop();
+                RevitExternalApp.SetServer(null); // Clear the old server reference
+                RevitExternalApp.SetServerRunning(false);
+                TaskDialog.Show("RScript", "Server stopped.");
+
+                // Do not create a new server instance until the user starts it again
             }
 
             return Result.Succeeded;

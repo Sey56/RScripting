@@ -1,21 +1,22 @@
 ﻿using Autodesk.Revit.UI;
 using RScript.Addin.Services;
+using System;
 using System.IO;
 
 namespace RScript.Addin.ViewModels
 {
     public class MainViewModel
     {
-        private ExternalEvent? _codeExecutionEvent;
-        private string? _pendingScriptContent;
-        private UIApplication? _pendingUiApp;
+        private ExternalEvent _codeExecutionEvent;
+        private string _pendingScriptContent;
+        private UIApplication _pendingUiApp;
 
         public static MainViewModel Instance => _instance ??= new MainViewModel();
-        private static MainViewModel? _instance;
+        private static MainViewModel _instance;
 
-        private MainViewModel()
-        {
-        }
+        public event Action<ExecutionResult> OnExecutionComplete;
+
+        private MainViewModel() { }
 
         public void Initialize(ExternalEvent codeExecutionEvent)
         {
@@ -31,7 +32,6 @@ namespace RScript.Addin.ViewModels
             {
                 var errorMessage = "External event is not initialized.";
                 LogErrorToFile(errorMessage);
-                ScriptGlobals.Print($"❌ {errorMessage}");
                 return new ExecutionResult { IsSuccess = false, ErrorMessage = errorMessage };
             }
 
@@ -41,55 +41,49 @@ namespace RScript.Addin.ViewModels
 
         public ExecutionResult ExecuteCodeInRevit(UIApplication uiApp)
         {
+            ExecutionResult result;
+
             try
             {
                 if (string.IsNullOrEmpty(_pendingScriptContent) || _pendingUiApp == null)
                 {
                     var errorMessage = "No script content or UIApplication available to execute.";
                     LogErrorToFile(errorMessage);
-                    ScriptGlobals.Print($"❌ {errorMessage}");
-                    return new ExecutionResult { IsSuccess = false, ErrorMessage = errorMessage };
-                }
-
-                var result = CodeRunner.ExecuteCode(_pendingScriptContent, _pendingUiApp);
-
-                if (!result.IsSuccess)
-                {
-                    LogErrorToFile(result.ErrorMessage ?? "Unknown error.");
-                    ScriptGlobals.Print($"❌ {result.ErrorMessage}");
+                    result = new ExecutionResult { IsSuccess = false, ErrorMessage = errorMessage };
                 }
                 else
                 {
-                    ScriptGlobals.Print($"✅ {result.ResultMessage}");
+                    result = CodeRunner.ExecuteCode(_pendingScriptContent, _pendingUiApp);
+                    if (!result.IsSuccess)
+                        LogErrorToFile(result.ErrorMessage ?? "Unknown error.");
                 }
-
-                return result;
             }
             catch (Exception ex)
             {
-                LogErrorToFile(ex.Message);
-                ScriptGlobals.Print($"🔥 Unexpected runtime error: {ex.Message}");
-                return new ExecutionResult { IsSuccess = false, ErrorMessage = $"Runtime error: {ex.Message}" };
+                var error = $"Runtime error: {ex.Message}";
+                LogErrorToFile(error);
+                result = new ExecutionResult { IsSuccess = false, ErrorMessage = error };
             }
             finally
             {
                 _pendingScriptContent = null;
                 _pendingUiApp = null;
-                ScriptGlobals.OutputPipeName = null;
             }
+
+            // 🔔 Notify listeners (like RScriptServer)
+            OnExecutionComplete?.Invoke(result);
+
+            return result;
         }
 
         private static void LogErrorToFile(string errorMessage)
         {
-            var errorLogPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "CodeEditorError.txt");
+            var logPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "CodeEditorError.txt");
             try
             {
-                File.WriteAllText(errorLogPath, $"{DateTime.Now}: {errorMessage}\n");
+                File.WriteAllText(logPath, $"{DateTime.Now}: {errorMessage}\n");
             }
-            catch (Exception ex)
-            {
-                ScriptGlobals.Print($"⚠️ Failed to write error log: {ex.Message}");
-            }
+            catch { /* Fail silently */ }
         }
     }
 }

@@ -11,9 +11,9 @@ namespace RScript.Addin.App
     public class RevitExternalApp : IExternalApplication
     {
         public static string HomePath => Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
-
+        private static RScriptServer _server;
         private static bool _serverRunning;
-        private static  PushButton? _toggleButton;
+        private static  PushButton _toggleButton;
 
         public Result OnStartup(UIControlledApplication application)
         {
@@ -23,7 +23,7 @@ namespace RScript.Addin.App
 
         public Result OnShutdown(UIControlledApplication application)
         {
-            Server?.Stop();
+            _server?.Stop();
             _serverRunning = false;
             UpdateButtonState();
             return Result.Succeeded;
@@ -50,8 +50,8 @@ namespace RScript.Addin.App
             UpdateButtonState();
         }
 
-        public static RevitScriptServer? Server { get; private set; }
-        public static void SetServer(RevitScriptServer server) => Server = server;
+        public static RScriptServer Server => _server;
+        public static void SetServer(RScriptServer server) => _server = server;
 
         private static void UpdateButtonState()
         {
