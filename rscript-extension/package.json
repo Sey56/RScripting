@@ -3,6 +3,7 @@
   "displayName": "RScript",
   "description": "VS Code extension for RScripting: Send C# scripts directly to Revit from a simplified scripting workspace. Automates project scaffolding, wiring, and bridge execution to streamline BIM automation workflows.",
   "version": "0.0.1",
+  "publisher": "sey56",
   "license": "MIT",
   "author": {
     "name": "Seyoum Hagos",
@@ -31,10 +32,6 @@
     "design tools",
     "VSCode",
     "Revit API"
-  ],
-  "activationEvents": [
-    "onCommand:rscript.initializeWorkspace",
-    "onCommand:rscript.runScript"
   ],
   "main": "./dist/extension.js",
   "contributes": {
