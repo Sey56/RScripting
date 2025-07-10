@@ -16,7 +16,7 @@ namespace RScript.Addin.Services
         {
             var entry = $"[PRINT {DateTime.Now:HH:mm:ss}] {message}";
             PrintLogs.Add(entry);
-            Console.WriteLine(entry);
+            //Console.WriteLine(entry);
         }
     }
 }

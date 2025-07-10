@@ -1,56 +1,71 @@
-import * as vscode from 'vscode';
-import * as fs from 'fs';
-import * as path from 'path';
-import { exec } from 'child_process';
-import { promisify } from 'util';
+import * as vscode from "vscode";
+import * as fs from "fs";
+import * as path from "path";
+import { exec } from "child_process";
+import { promisify } from "util";
 
 const execPromise = promisify(exec);
 
 export function activate(context: vscode.ExtensionContext) {
-    console.log('RScript extension is now active!');
+  console.log("RScript extension is now active!");
 
-    const initializeWorkspace = vscode.commands.registerCommand('rscript.initializeWorkspace', async () => {
-        const workspaceFolders = vscode.workspace.workspaceFolders;
-        if (!workspaceFolders) {
-            vscode.window.showErrorMessage('Please open a workspace folder before initializing RScript.');
-            return;
+  const initializeWorkspace = vscode.commands.registerCommand(
+    "rscript.initializeWorkspace",
+    async () => {
+      const workspaceFolders = vscode.workspace.workspaceFolders;
+      if (!workspaceFolders) {
+        vscode.window.showErrorMessage(
+          "Please open a workspace folder before initializing RScript."
+        );
+        return;
+      }
+
+      const rootPath = workspaceFolders[0].uri.fsPath;
+      const stubsPath = path.join(rootPath, "Stubs");
+      const scriptsPath = path.join(rootPath, "Scripts");
+      const toolsPath = path.join(rootPath, "Tools");
+
+      try {
+        [stubsPath, scriptsPath, toolsPath].forEach((folder) => {
+          if (!fs.existsSync(folder)) {
+            fs.mkdirSync(folder);
+          }
+        });
+
+        // 🔗 Copy bridge files
+        const extensionPath = context.extensionPath;
+        const binPath = path.join(extensionPath, "bin");
+        const filesToCopy = [
+          "rscript-bridge.exe",
+          "rscript-bridge.dll",
+          "rscript-bridge.runtimeconfig.json",
+        ];
+        for (const file of filesToCopy) {
+          const source = path.join(binPath, file);
+          const dest = path.join(toolsPath, file);
+          if (!fs.existsSync(source)) {
+            throw new Error(`${file} not found in extension bin.`);
+          }
+          fs.copyFileSync(source, dest);
         }
 
-        const rootPath = workspaceFolders[0].uri.fsPath;
-        const stubsPath = path.join(rootPath, 'Stubs');
-        const scriptsPath = path.join(rootPath, 'Scripts');
-        const toolsPath = path.join(rootPath, 'Tools');
-
-        try {
-            [stubsPath, scriptsPath, toolsPath].forEach(folder => {
-                if (!fs.existsSync(folder)) {fs.mkdirSync(folder);}
-            });
-
-            // 🔗 Copy bridge files
-            const extensionPath = context.extensionPath;
-            const binPath = path.join(extensionPath, 'bin');
-            const filesToCopy = ['rscript-bridge.exe', 'rscript-bridge.dll', 'rscript-bridge.runtimeconfig.json'];
-            for (const file of filesToCopy) {
-                const source = path.join(binPath, file);
-                const dest = path.join(toolsPath, file);
-                if (!fs.existsSync(source)) {throw new Error(`${file} not found in extension bin.`);}
-                fs.copyFileSync(source, dest);
-            }
-
-            // 🧱 Create global.json
-            const globalJson = `
+        // 🧱 Create global.json
+        const globalJson = `
 {
   "sdk": {
     "version": "8.0.407"
   }
 }
             `.trim();
-            fs.writeFileSync(path.join(rootPath, 'global.json'), globalJson);
+        fs.writeFileSync(path.join(rootPath, "global.json"), globalJson);
 
-            // 📦 Create RScript.csproj
-            const config = vscode.workspace.getConfiguration('rscript');
-            const revitPath = config.get<string>('revitInstallPath', 'C:\\Program Files\\Autodesk\\Revit 2025');
-            const csproj = `
+        // 📦 Create RScript.csproj
+        const config = vscode.workspace.getConfiguration("rscript");
+        const revitPath = config.get<string>(
+          "revitInstallPath",
+          "C:\\Program Files\\Autodesk\\Revit 2025"
+        );
+        const csproj = `
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFramework>net8.0</TargetFramework>
@@ -71,10 +86,10 @@ export function activate(context: vscode.ExtensionContext) {
   </ItemGroup>
 </Project>
             `.trim();
-            fs.writeFileSync(path.join(rootPath, 'RScript.csproj'), csproj);
+        fs.writeFileSync(path.join(rootPath, "RScript.csproj"), csproj);
 
-            // 🧠 IntelliSense stubs
-            const stubs = `
+        // 🧠 IntelliSense stubs
+        const stubs = `
 using Autodesk.Revit.DB;
 using Autodesk.Revit.UI;
 using System;
@@ -101,17 +116,20 @@ namespace RScript.Addin.Services
     }
 }
             `.trim();
-            fs.writeFileSync(path.join(stubsPath, 'RScriptAddinServices.cs'), stubs);
+        fs.writeFileSync(
+          path.join(stubsPath, "RScriptAddinServices.cs"),
+          stubs
+        );
 
-            const globalUsings = `
+        const globalUsings = `
 global using static RScript.Addin.Services.ScriptGlobals;
 global using static RScript.Addin.Services.Tx;
 global using static RScript.Addin.Services.Helpers;
             `.trim();
-            fs.writeFileSync(path.join(stubsPath, 'GlobalUsings.cs'), globalUsings);
+        fs.writeFileSync(path.join(stubsPath, "GlobalUsings.cs"), globalUsings);
 
-            // 📝 Main.cs script
-            const mainScript = `
+        // 📝 Main.cs script
+        const mainScript = `
 using Autodesk.Revit.DB;
 
 Print("Starting spiral sketch...");
@@ -124,10 +142,10 @@ Transact("Create Spiral", doc =>
 
 Print("Spiral sketch finished.");
             `.trim();
-            fs.writeFileSync(path.join(scriptsPath, 'Main.cs'), mainScript);
+        fs.writeFileSync(path.join(scriptsPath, "Main.cs"), mainScript);
 
-            // 🧪 SpiralCreator.cs
-            const spiralScript = `
+        // 🧪 SpiralCreator.cs
+        const spiralScript = `
 using Autodesk.Revit.DB;
 using System;
 using System.Collections.Generic;
@@ -173,13 +191,18 @@ public class SpiralCreator
     }
 }
             `.trim();
-            fs.writeFileSync(path.join(scriptsPath, 'SpiralCreator.cs'), spiralScript);
+        fs.writeFileSync(
+          path.join(scriptsPath, "SpiralCreator.cs"),
+          spiralScript
+        );
 
-            // ⚙️ .vscode tasks
-            const vscodeDir = path.join(rootPath, '.vscode');
-            if (!fs.existsSync(vscodeDir)) {fs.mkdirSync(vscodeDir);}
+        // ⚙️ .vscode tasks
+        const vscodeDir = path.join(rootPath, ".vscode");
+        if (!fs.existsSync(vscodeDir)) {
+          fs.mkdirSync(vscodeDir);
+        }
 
-            const tasksJson = `
+        const tasksJson = `
 {
   "version": "2.0.0",
   "tasks": [
@@ -196,73 +219,103 @@ public class SpiralCreator
   ]
 }
             `.trim();
-            fs.writeFileSync(path.join(vscodeDir, 'tasks.json'), tasksJson);
+        fs.writeFileSync(path.join(vscodeDir, "tasks.json"), tasksJson);
 
-            // 🌐 Restore prompt
-            const restore = await vscode.window.showInformationMessage(
-                'Workspace initialized! Run dotnet restore for IntelliSense.',
-                'Restore'
+        // 🌐 Restore prompt
+        const restore = await vscode.window.showInformationMessage(
+          "Workspace initialized! You can run dotnet restore to enable IntelliSense.",
+          "Restore"
+        );
+        if (restore === "Restore") {
+          try {
+            await vscode.commands.executeCommand("dotnet.restore");
+            vscode.window.showInformationMessage(
+              "✅ Project restored and ready for scripting."
             );
-            if (restore === 'Restore') {
-                try {
-                    await vscode.commands.executeCommand('dotnet.restore');
-                    vscode.window.showInformationMessage('dotnet restore succeeded.');
-                } catch (err: any) {
-                    vscode.window.showWarningMessage(`Restore failed: ${err.message}`);
-                }
-            }
-
-            // 🪟 Open Main.cs
-            const mainUri = vscode.Uri.file(path.join(scriptsPath, 'Main.cs'));
-            const doc = await vscode.workspace.openTextDocument(mainUri);
-            await vscode.window.showTextDocument(doc);
-
-        } catch (err: any) {
-            vscode.window.showErrorMessage(`Initialization failed: ${err.message}`);
+          } catch {
+            vscode.window.showInformationMessage(
+              "✅ Workspace is ready. Restore skipped or already complete."
+            );
+          }
         }
-    });
 
-    const runScript = vscode.commands.registerCommand('rscript.runScript', async () => {
-    const folders = vscode.workspace.workspaceFolders;
-    if (!folders) {
-        vscode.window.showErrorMessage('Open a workspace folder to run the script.');
-        return;
+        // 🪟 Open Main.cs
+        const mainUri = vscode.Uri.file(path.join(scriptsPath, "Main.cs"));
+        const doc = await vscode.workspace.openTextDocument(mainUri);
+        await vscode.window.showTextDocument(doc);
+      } catch (err: any) {
+        vscode.window.showErrorMessage(`Initialization failed: ${err.message}`);
+      }
     }
+  );
 
-    const rootPath = folders[0].uri.fsPath;
-    const scriptsPath = path.join(rootPath, 'Scripts');
-    const bridgeExe = path.join(rootPath, 'Tools', 'rscript-bridge.exe');
-
-    if (!fs.existsSync(bridgeExe)) {
-        vscode.window.showErrorMessage('rscript-bridge.exe missing — initialize the workspace first.');
+  const runScript = vscode.commands.registerCommand(
+    "rscript.runScript",
+    async () => {
+      const folders = vscode.workspace.workspaceFolders;
+      if (!folders) {
+        vscode.window.showErrorMessage(
+          "Open a workspace folder to run the script."
+        );
         return;
-    }
+      }
 
-    const outputChannel = vscode.window.createOutputChannel('RScript');
-    outputChannel.clear();
-    outputChannel.show(true);
-    vscode.window.setStatusBarMessage('$(rocket) Sending script to Revit...', 3000);
+      const rootPath = folders[0].uri.fsPath;
+      const scriptsPath = path.join(rootPath, "Scripts");
+      const bridgeExe = path.join(rootPath, "Tools", "rscript-bridge.exe");
 
-    try {
-        const { stdout, stderr } = await execPromise(`"${bridgeExe}" "${scriptsPath}"`);
+      if (!fs.existsSync(bridgeExe)) {
+        vscode.window.showErrorMessage(
+          "rscript-bridge.exe missing — initialize the workspace first."
+        );
+        return;
+      }
+
+      const outputChannel = vscode.window.createOutputChannel("RScript");
+      outputChannel.clear();
+      outputChannel.show(true);
+      vscode.window.setStatusBarMessage(
+        "$(rocket) Sending script to Revit...",
+        3000
+      );
+
+      try {
+        const { stdout, stderr } = await execPromise(
+          `"${bridgeExe}" "${scriptsPath}"`
+        );
 
         if (stderr?.trim()) {
-            outputChannel.appendLine(`❌ Bridge error:\n${stderr.trim()}`);
+          outputChannel.appendLine(`[ERROR] Bridge stderr:\n${stderr.trim()}`);
         }
 
         if (stdout?.trim()) {
-            outputChannel.appendLine(stdout.trim());
+          outputChannel.appendLine(stdout.trim());
         } else {
-            outputChannel.appendLine('✅ Script sent. Awaiting response...');
+          outputChannel.appendLine("[INFO] Script sent. Awaiting response...");
         }
-    } catch (err: any) {
-        outputChannel.appendLine(`❌ Script execution failed:\n${err.message}`);
-        vscode.window.showErrorMessage(`Script execution failed: ${err.message}`);
-    }
-});
+      } catch (err: any) {
+        const msg = err.message || "";
+        const exitCodeMatch = msg.match(/exit code (\d+)/);
+        const exitCodeFromMessage = exitCodeMatch
+          ? parseInt(exitCodeMatch[1], 10)
+          : undefined;
+        const exitCodeFromObject = err.code;
 
-    context.subscriptions.push(initializeWorkspace);
-    context.subscriptions.push(runScript);
+        const actualExitCode = exitCodeFromMessage ?? exitCodeFromObject;
+
+        let userFriendly = `[ERROR] Script execution failed:\n${msg}`;
+        if (actualExitCode === 2 || msg.includes("RScriptServer not running")) {
+          userFriendly = `[ERROR] RScriptServer not running — start it from the Revit Add-ins tab before sending scripts.`;
+        }
+
+        outputChannel.appendLine(userFriendly);
+        vscode.window.showErrorMessage(userFriendly);
+      }
+    }
+  );
+
+  context.subscriptions.push(initializeWorkspace);
+  context.subscriptions.push(runScript);
 }
 
 export function deactivate() {}

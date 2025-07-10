@@ -16,7 +16,7 @@ class Program
         {
             if (args.Length == 0)
             {
-                Console.WriteLine("Please provide the path to the Scripts folder.");
+                Console.WriteLine("[ERROR] No script folder path provided.");
                 File.AppendAllText(logPath, "No script folder path provided.\n");
                 Environment.Exit(1);
             }
@@ -24,7 +24,7 @@ class Program
             string scriptsFolder = args[0];
             if (!Directory.Exists(scriptsFolder))
             {
-                Console.WriteLine($"Scripts folder not found: {scriptsFolder}");
+                Console.WriteLine($"[ERROR] Scripts folder not found: {scriptsFolder}");
                 File.AppendAllText(logPath, $"Scripts folder not found: {scriptsFolder}\n");
                 Environment.Exit(1);
             }
@@ -46,7 +46,17 @@ class Program
             byte[] payloadBytes = Encoding.UTF8.GetBytes(jsonPayload);
 
             using var pipeClient = new NamedPipeClientStream(".", "RScriptPipe", PipeDirection.InOut, PipeOptions.Asynchronous);
-            pipeClient.Connect(5000);
+            try
+            {
+                pipeClient.Connect(1000); // 1 second timeout
+            }
+            catch (TimeoutException)
+            {
+                Console.WriteLine("[ERROR] RScriptServer not running — please start it from the Revit Add-ins tab.");
+                File.AppendAllText(logPath, "Connection timeout: RScriptServer likely not running.\n");
+                Environment.Exit(2); // Specific exit code for server unavailable
+            }
+
             File.AppendAllText(logPath, "Connected to pipe server.\n");
 
             // Write payload length
@@ -79,22 +89,14 @@ class Program
             File.AppendAllText(logPath, $"Received response: {response}\n");
 
             File.AppendAllText(logPath, "Bridge exiting cleanly.\n");
-        }
-        catch (TimeoutException)
-        {
-            Console.WriteLine("Connection to Revit timed out. Make sure RScript is running in Revit.");
-            File.AppendAllText(logPath, "Connection timeout error\n");
-            Environment.Exit(1);
+            Environment.Exit(0);
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Error sending scripts: {ex.Message}");
+            Console.WriteLine("[ERROR] Unexpected bridge failure. Make sure RScriptServer is running.");
+            Console.WriteLine($"Details: {ex.Message}");
             File.AppendAllText(logPath, $"Bridge error: {ex.Message}\n");
-            Environment.Exit(1);
+            Environment.Exit(3); // General catch-all error
         }
-
-
-        // Ensure process exits
-        Environment.Exit(0);
     }
 }
