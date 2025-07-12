@@ -103,8 +103,8 @@ Ctrl + Alt + R
 
 - **VS Code Output Tab** → Channel: `RScript`  
   ```
-  [PRINT 14:30:05] 📌 Creating wall centered at origin...
-  [PRINT 14:30:05] ✅ Wall created.
+  [PRINT 14:30:05] Creating wall centered at origin...
+  [PRINT 14:30:05] Wall created.
   ```
 
 ![Revit view with wall centered at origin](assets/wall-origin-grid.png)  

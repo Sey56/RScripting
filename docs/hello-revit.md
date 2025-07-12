@@ -33,20 +33,20 @@ Replace the content with:
 ```csharp
 using Autodesk.Revit.DB;
 
-// 🌍 Define wall size in meters
+// Define wall size in meters
 double wallLengthMeters = 6.0;
 double wallHeightMeters = 3.0;
 
-// 🧮 Convert to Revit internal units (feet)
+// Convert to Revit internal units (feet)
 double lengthFt = UnitUtils.ConvertToInternalUnits(wallLengthMeters, UnitTypeId.Meters);
 double heightFt = UnitUtils.ConvertToInternalUnits(wallHeightMeters, UnitTypeId.Meters);
 
-// 📍 Define wall line endpoints (centered at origin)
+// Define wall line endpoints (centered at origin)
 XYZ pt1 = new XYZ(-lengthFt / 2, 0, 0);
 XYZ pt2 = new XYZ(lengthFt / 2, 0, 0);
 Line wallLine = Line.CreateBound(pt1, pt2);
 
-// 🧭 Find base level
+// Find base level
 Level? level = new FilteredElementCollector(Doc)
     .OfClass(typeof(Level))
     .Cast<Level>()
@@ -54,18 +54,18 @@ Level? level = new FilteredElementCollector(Doc)
 
 if (level == null)
 {
-    Print("❌ Level 'Level 1' not found.");
+    Print("Level 'Level 1' not found.");
     return;
 }
 
-Print("📌 Creating wall centered at origin...");
+Print("Creating wall centered at origin...");
 
 Transact("Create wall", doc =>
 {
     Wall wall = Wall.Create(doc, wallLine, level.Id, false);
     wall.get_Parameter(BuiltInParameter.WALL_USER_HEIGHT_PARAM)?.Set(heightFt);
 
-    Print("✅ Wall created.");
+    Print("Wall created.");
 });
 ```
 
