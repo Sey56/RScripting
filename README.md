@@ -1,6 +1,12 @@
+<p align="center">
+  <img src="assets/rscript-logo.png" alt="RScript Logo" width="150"/>
+</p>
+
+---
+
 # 🏗️ RScripting
 
-**Fast C# scripting for Revit 2025 — powered by Roslyn and VS Code**
+**Streamlined C# scripting for Revit — built on Roslyn, the Revit API, and VS Code**
 
 RScripting (short for Revit Scripting) streamlines Revit automation with live, top-level C# scripting — executed instantly from VS Code, no builds required.  
 It complements traditional add-ins and tools like Dynamo by offering a lightweight platform for prototyping, testing ideas, or running production-level scripts — all without packaging overhead.
@@ -101,7 +107,7 @@ Ctrl + Alt + R
   [PRINT 14:30:05] ✅ Wall created.
   ```
 
-![Revit view with wall centered at origin](docs/img/wall-origin-grid.png)  
+![Revit view with wall centered at origin](assets/wall-origin-grid.png)  
 **Figure**: Wall placed along the X-axis at the origin, with crossing grids for spatial reference.
 
 - **Local Logs** for diagnostics in local user's home directory:
