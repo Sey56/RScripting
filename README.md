@@ -1,6 +1,6 @@
 # 🏗️ RScripting
 
-**Lightning-fast C# scripting for Revit 2025 — powered by Roslyn and VS Code**
+**Fast C# scripting for Revit 2025 — powered by Roslyn and VS Code**
 
 RScripting (short for Revit Scripting) streamlines Revit automation with live, top-level C# scripting — executed instantly from VS Code, no builds required.  
 It complements traditional add-ins and tools like Dynamo by offering a lightweight platform for prototyping, testing ideas, or running production-level scripts — all without packaging overhead.
@@ -123,10 +123,22 @@ RScripting uses a single, streamlined build method:
 
 - Runs in **Git Bash** (comes with [Git for Windows](https://git-scm.com))  
 - Installs:
-  - ✅ Revit Add-In
-  - ✅ IPC Bridge
+  - ✅ Revit Add-In  
+  - ✅ IPC Bridge  
   - ✅ VS Code Extension  
 - Fast and reliable — no need for Visual Studio or manual copying
+
+---
+
+### 👨‍💻 Development Mode (Preserve bin & obj)
+
+```bash
+./build.sh --dev
+```
+
+- Keeps `bin` and `obj` folders after build (useful for debugging in Visual Studio)  
+- Skips cleanup step to support incremental development  
+- Ideal for contributors maintaining RScripting locally
 
 > 💡 `build.sh` must be run in Git Bash. Other terminals like Command Prompt or PowerShell are not supported.
 
