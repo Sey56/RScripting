@@ -92,20 +92,31 @@ export function activate(context: vscode.ExtensionContext) {
         );
 
         // 🧠 IntelliSense stubs
-        const stubs = `
+const stubs = `
 using Autodesk.Revit.DB;
 using Autodesk.Revit.UI;
 using System;
+using System.Collections.Generic;
 
 namespace RScript.Addin.Services
 {
-    public class ScriptGlobals
+    public static class ScriptGlobals
     {
         public static UIApplication? UIApp { get; set; }
         public static UIDocument? UIDoc { get; set; }
         public static Document? Doc { get; set; }
 
-        public static void Print(string message) { }
+        public static UIApplication? uiapp => UIApp;
+        public static UIDocument? uidoc => UIDoc;
+        public static Document? doc => Doc;
+
+        public static List<string> PrintLogs { get; } = new();
+
+        public static void Print(string message)
+        {
+            var entry = $"[PRINT {DateTime.Now:HH:mm:ss}] {message}";
+            PrintLogs.Add(entry);
+        }
     }
 
     public static class Tx
@@ -118,11 +129,12 @@ namespace RScript.Addin.Services
         public static void Transact(string name, Action<Document> action) { }
     }
 }
-            `.trim();
-        fs.writeFileSync(
-          path.join(stubsPath, "RScriptAddinServices.cs"),
-          stubs
-        );
+`.trim();
+
+fs.writeFileSync(
+  path.join(stubsPath, "RScriptAddinServices.cs"),
+  stubs
+);
 
         const globalUsings = `
 global using static RScript.Addin.Services.ScriptGlobals;
@@ -131,6 +143,12 @@ global using static RScript.Addin.Services.Helpers;
             `.trim();
         fs.writeFileSync(path.join(stubsPath, "GlobalUsings.cs"), globalUsings);
 
+        const editorConfig = `
+[*.{cs,vb}]
+dotnet_diagnostic.CA1050.severity = none
+`.trim();
+
+fs.writeFileSync(path.join(rootPath, ".editorconfig"), editorConfig);
         // 📝 Main.cs script
         const mainScript = `
 using Autodesk.Revit.DB;
@@ -140,7 +158,7 @@ Print("Starting spiral sketch...");
 Transact("Create Spiral", doc =>
 {
     var spiral = new SpiralCreator();
-    spiral.CreateSpiral(Doc, "Level 1", 100, 5, 20);
+    spiral.CreateSpiral(Doc, "Level 1", 100, 10, 20);
 });
 
 Print("Spiral sketch finished.");

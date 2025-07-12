@@ -44,8 +44,8 @@ Sets up:
 Create a folder anywhere with any name:
 
 ```bash
-mkdir SpiralBuilding
-cd SpiralBuilding
+mkdir TestWorkspace
+cd TestWorkspace
 code .
 ```
 

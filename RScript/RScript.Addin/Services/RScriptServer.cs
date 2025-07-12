@@ -94,8 +94,8 @@ namespace RScript.Addin.Services
                     }
 
                     string response = finalResult.IsSuccess
-                        ? $"✅ {finalResult.ResultMessage}"
-                        : $"❌ {finalResult.ErrorMessage}\n{string.Join("\n", finalResult.ErrorDetails ?? Array.Empty<string>())}";
+    ? finalResult.ResultMessage
+    : $"[ERROR] {finalResult.ErrorMessage}\n{string.Join("\n", finalResult.ErrorDetails ?? Array.Empty<string>())}";
 
                     byte[] responseBytes = Encoding.UTF8.GetBytes(response);
                     await pipeServer.WriteAsync(BitConverter.GetBytes(responseBytes.Length), 0, 4, cancellationToken);
