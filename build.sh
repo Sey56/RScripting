@@ -72,6 +72,16 @@ code --uninstall-extension "$EXTENSION_ID" || echo "ℹ️ Previous extension no
 code --install-extension "$VSIX_FILE"
 echo "✅ Extension installed."
 
+# 🧹 Cleanup build artifacts (skip with --dev)
+if [[ "$1" != "--dev" ]]; then
+  echo "🧺 Cleaning up bin and obj folders..."
+  rm -rf "$RSCRIPT_ADDIN_PROJECT_DIR/bin" "$RSCRIPT_ADDIN_PROJECT_DIR/obj"
+  rm -rf "$RSCRIPT_BRIDGE_DIR/bin" "$RSCRIPT_BRIDGE_DIR/obj"
+  echo "✅ Cleanup complete — workspace is fresh."
+else
+  echo "🧼 Dev mode enabled — build artifacts preserved."
+fi
+
 echo "--- ✅ Build & Deployment Complete ---"
 echo "
 🚀 Next steps:
